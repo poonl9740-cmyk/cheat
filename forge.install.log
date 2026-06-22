@@ -1,0 +1,146 @@
+buildscript {
+    repositories {
+        maven { url = 'https://maven.minecraftforge.net' }
+        mavenCentral()
+        maven { url = 'https://repo.spongepowered.org/repository/maven-public/' }
+        maven { url = 'https://plugins.gradle.org/m2/' }
+        maven { url = 'https://jitpack.io' }
+    }
+    dependencies {
+        classpath group: 'net.minecraftforge.gradle', name: 'ForgeGradle', version: '5.1.+', changing: true
+        classpath 'org.spongepowered:mixingradle:0.7-SNAPSHOT'
+        classpath 'com.github.jengelman.gradle.plugins:shadow:6.1.0'
+    }
+}
+
+plugins {
+    id 'eclipse'
+    id 'maven-publish'
+}
+
+apply plugin: 'net.minecraftforge.gradle'
+apply plugin: 'org.spongepowered.mixin'
+apply plugin: 'com.github.johnrengelman.shadow'
+
+version = '1.0'
+group = 'edu.unl.csce466'
+archivesBaseName = 'csce466-mod'
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(8)
+
+println "Java: ${System.getProperty 'java.version'}, JVM: ${System.getProperty 'java.vm.version'} (${System.getProperty 'java.vendor'}), Arch: ${System.getProperty 'os.arch'}"
+
+minecraft {
+    mappings channel: 'official', version: '1.16.5'
+
+    runs {
+        client {
+            workingDirectory project.file('run')
+            property 'forge.logging.markers', 'REGISTRIES'
+            property 'forge.logging.console.level', 'debug'
+            property 'mixin.env.remapRefMap', 'true'
+            property 'mixin.env.refMapRemappingFile', "${project.projectDir}/build/createSrgToMcp/output.srg"
+            mods { examplemod { source sourceSets.main } }
+        }
+        server {
+            workingDirectory project.file('run')
+            property 'forge.logging.markers', 'REGISTRIES'
+            property 'forge.logging.console.level', 'debug'
+            property 'mixin.env.remapRefMap', 'true'
+            property 'mixin.env.refMapRemappingFile', "${project.projectDir}/build/createSrgToMcp/output.srg"
+            mods { examplemod { source sourceSets.main } }
+        }
+        data {
+            workingDirectory project.file('run')
+            property 'forge.logging.markers', 'REGISTRIES'
+            property 'forge.logging.console.level', 'debug'
+            args '--mod', 'examplemod', '--all', '--output', file('src/generated/resources/'), '--existing', file('src/main/resources/')
+            mods { examplemod { source sourceSets.main } }
+        }
+    }
+}
+
+sourceSets.main.resources { srcDir 'src/generated/resources' }
+
+repositories {
+    maven { url = 'https://maven.minecraftforge.net' }
+    mavenCentral()
+    maven { url = 'https://repo.spongepowered.org/repository/maven-public/' }
+    maven { url = 'https://jitpack.io' }
+}
+
+ext {
+    imguiVersion = '1.86.10'
+}
+
+configurations {
+    shade
+    implementation.extendsFrom shade
+}
+
+dependencies {
+    minecraft 'net.minecraftforge:forge:1.16.5-36.2.34'
+    annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
+
+    shade "io.github.spair:imgui-java-binding:${imguiVersion}"
+    shade("io.github.spair:imgui-java-lwjgl3:${imguiVersion}") {
+        exclude group: 'org.lwjgl'
+    }
+    shade "io.github.spair:imgui-java-natives-windows:${imguiVersion}"
+    shade "io.github.spair:imgui-java-natives-linux:${imguiVersion}"
+    shade "io.github.spair:imgui-java-natives-macos:${imguiVersion}"
+}
+
+mixin {
+    add sourceSets.main, 'forge-mixin.refmap.json'
+    config 'forge-mixin.json'
+}
+
+jar {
+    manifest {
+        attributes([
+            "Specification-Title"     : "examplemod",
+            "Specification-Vendor"    : "examplemodsareus",
+            "Specification-Version"   : "1",
+            "Implementation-Title"    : project.name,
+            "Implementation-Version"  : project.jar.archiveVersion,
+            "Implementation-Vendor"   : "examplemodsareus",
+            "Implementation-Timestamp": new Date().format("yyyy-MM-dd'T'HH:mm:ssZ"),
+            "MixinConfigs"            : "forge-mixin.json"
+        ])
+    }
+}
+
+shadowJar {
+    archiveClassifier.set('')
+    configurations = [project.configurations.shade]
+}
+
+reobf {
+    shadowJar {}
+}
+
+build.dependsOn 'reobfShadowJar'
+jar.finalizedBy('reobfJar')
+
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            artifact shadowJar
+        }
+    }
+    repositories {
+        maven {
+            url "file://${project.projectDir}/mcmodsrepo"
+        }
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
+
+tasks.withType(ProcessResources).configureEach {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}

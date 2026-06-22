@@ -1,0 +1,8 @@
+distributionBase=GRADLE_USER_HOME
+distributionPath=wrapper/dists
+# ForgeGradle 4.x требует Gradle 7.x. Используем 7.5.1 — стабильная версия,
+# совместимая с ForgeGradle 4.1.+ и shadow 6.1.0.
+# Зеркало Tencent Cloud (работает из РФ/СНГ).
+distributionUrl=https\://services.gradle.org/distributions/gradle-7.5.1-bin.zip
+zipStoreBase=GRADLE_USER_HOME
+zipStorePath=wrapper/dists
